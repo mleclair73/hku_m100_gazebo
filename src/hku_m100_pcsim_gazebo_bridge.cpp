@@ -5,7 +5,6 @@
 
 #include <dji_sdk/Acceleration.h>
 #include <dji_sdk/AttitudeQuaternion.h>
-#include <dji_sdk/LocalPosition.h>
 #include <dji_sdk/Velocity.h>
 #include <dji_sdk/LocalPosition.h>
 #include <dji_sdk/Gimbal.h>
@@ -18,6 +17,8 @@
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Vector3Stamped.h>
+#include <geometry_msgs/PointStamped.h>
 
 #include <tf/LinearMath/Quaternion.h>
 #include <tf/LinearMath/Matrix3x3.h>
@@ -105,22 +106,22 @@ void attitudeQuaternionCallback(const dji_sdk::AttitudeQuaternion::ConstPtr& att
   
 }
 
-void velocityCallback(const dji_sdk::Velocity::ConstPtr& velocity_msg)
+void velocityCallback(const geometry_msgs::Vector3Stamped::ConstPtr& velocity_msg)
 {
-  target_twist.linear.x  = velocity_msg->vx;
-  target_twist.linear.y  = velocity_msg->vy;
-  target_twist.linear.z  = velocity_msg->vz;
+  target_twist.linear.x  = velocity_msg->vector.x;
+  target_twist.linear.y  = velocity_msg->vector.y;
+  target_twist.linear.z  = velocity_msg->vector.z;
 
   velocity_updated = true;
   // std::cout << "velocity callback get called" << std::endl;
 
 }
 
-void localPositionCallback(const dji_sdk::LocalPosition::ConstPtr& position_msg)
+void localPositionCallback(const geometry_msgs::PointStamped::ConstPtr& position_msg)
 {
-  target_pose.position.x = position_msg->x;
-  target_pose.position.y = -position_msg->y;
-  target_pose.position.z = position_msg->z;
+  target_pose.position.x = position_msg->point.x;
+  target_pose.position.y = -position_msg->point.y;
+  target_pose.position.z = position_msg->point.z;
 
   position_updated = true;
   // std::cout << "local position callback get called" << std::endl;
