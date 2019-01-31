@@ -8,7 +8,7 @@
 #include <dji_sdk/Velocity.h>
 #include <dji_sdk/LocalPosition.h>
 #include <dji_sdk/Gimbal.h>
-
+#include <dji_sdk/SetLocalPosRef.h>
 
 #include <gazebo_msgs/ModelState.h>
 #include <gazebo_msgs/LinkState.h>
@@ -19,6 +19,8 @@
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/QuaternionStamped.h>
+#include <sensor_msgs/Imu.h>
 
 #include <tf/LinearMath/Quaternion.h>
 #include <tf/LinearMath/Matrix3x3.h>
@@ -45,7 +47,7 @@ geometry_msgs::Pose target_pitch_pose;
 gazebo_msgs::ModelState target_model_state;
 gazebo_msgs::LinkState target_gimbal_state;
 
-std::string model_name = "hku_m100";
+std::string model_name = "not_m100";
 std::string car_model_name = "polaris_ranger_xp900";
 std::string reference_frame = "world";
 std::string car_reference_frame = "chassis";
@@ -60,6 +62,7 @@ std::string gimbal_yaw_link_name = "yaw_link";
 ros::Subscriber attitude_quaternion_subscriber;
 ros::Subscriber velocity_subscriber;
 ros::Subscriber local_position_subscriber;
+ros::Subscriber imu_subscriber;
 ros::Subscriber gimbal_orientation_subscriber;
 ros::Subscriber car_driver_subscriber;
 
@@ -90,16 +93,19 @@ tf::Matrix3x3 car_ori_m;
 tf::Vector3 car_original_effort_v;
 tf::Vector3 car_rotated_effort_v;
 
-void attitudeQuaternionCallback(const dji_sdk::AttitudeQuaternion::ConstPtr& attitude_quaternion_msg)
+void imuCallback(const sensor_msgs::Imu::ConstPtr& imu_msg)
 {
-  target_pose.orientation.w = -attitude_quaternion_msg->q0;
-  target_pose.orientation.x = -attitude_quaternion_msg->q1;
-  target_pose.orientation.y = attitude_quaternion_msg->q2;
-  target_pose.orientation.z = attitude_quaternion_msg->q3;
+    target_twist.angular.x = imu_msg->angular_velocity.x;
+    target_twist.angular.y = imu_msg->angular_velocity.y;
+    target_twist.angular.z = imu_msg->angular_velocity.z;
+}
 
-  target_twist.angular.x = attitude_quaternion_msg->wx;
-  target_twist.angular.y = attitude_quaternion_msg->wy;
-  target_twist.angular.z = attitude_quaternion_msg->wz;
+void attitudeQuaternionCallback(const geometry_msgs::QuaternionStamped::ConstPtr& attitude_quaternion_msg)
+{
+  target_pose.orientation.w = -attitude_quaternion_msg->quaternion.w;
+  target_pose.orientation.x = -attitude_quaternion_msg->quaternion.x;
+  target_pose.orientation.y = attitude_quaternion_msg->quaternion.y;
+  target_pose.orientation.z = attitude_quaternion_msg->quaternion.z;
 
   // std::cout << "attitude callback get called" << std::endl;
 
@@ -224,15 +230,24 @@ int main(int argc, char **argv)
 
   ros::NodeHandle n;
 
+  dji_sdk::SetLocalPosRef srv;
+  if (ros::service::call("/dji_sdk/set_local_pos_ref", srv))
+  {
+    ROS_ERROR("Set local pos ref!");
+  }
+  else
+  {
+    ROS_ERROR("Couldn't set local position reference");
+  }
  
   attitude_quaternion_subscriber = n.subscribe("/dji_sdk/attitude_quaternion", 1000, attitudeQuaternionCallback);
   velocity_subscriber = n.subscribe("/dji_sdk/velocity", 1000, velocityCallback);
   local_position_subscriber = n.subscribe("/dji_sdk/local_position", 1000, localPositionCallback);
-  gimbal_orientation_subscriber = n.subscribe("/dji_sdk/gimbal", 1000, gimbalOrientationCallback);
-  car_driver_subscriber = n.subscribe("/car/cmd_vel", 1000, carPositionCallback);
+  imu_subscriber = n.subscribe("/dji_sdk/imu", 1000, imuCallback);
+  //gimbal_orientation_subscriber = n.subscribe("/dji_sdk/gimbal", 1000, gimbalOrientationCallback);
+  //car_driver_subscriber = n.subscribe("/car/cmd_vel", 1000, carPositionCallback);
 
   model_state_client = n.serviceClient<gazebo_msgs::SetModelState>("/gazebo/set_model_state", true);
-  gimbal_state_client = n.serviceClient<gazebo_msgs::SetLinkState>("gazebo/set_link_state", true);
 
   car_next_q = tf::Quaternion(0, 0, 0, 1);
   car_ori_m = tf::Matrix3x3(car_next_q);
@@ -245,7 +260,7 @@ int main(int argc, char **argv)
   {
     ros::spinOnce();
 
-    if(model_state_client)
+    if(1)
     {
       target_model_state.model_name = model_name;
       target_model_state.reference_frame = reference_frame;
@@ -253,60 +268,14 @@ int main(int argc, char **argv)
       target_model_state.twist = target_twist;
       set_model_state.request.model_state = target_model_state;
       model_state_client.call(set_model_state);
-      // std::cout << "service called" << std::endl;
+      ROS_ERROR_STREAM("Name: " << target_model_state.model_name << " Ref frame: " << target_model_state.reference_frame << " Pose: " << target_model_state.pose.position.x << ", " << target_model_state.pose.position.y << ", " << target_model_state.pose.position.z);
+      ROS_ERROR("Twist: %f, %f, %f", target_model_state.twist.linear.x, target_model_state.twist.linear.y, target_model_state.twist.linear.z);
     }
     else
     {
-      //TODO: change to ROS_ERROR
       // std::cout << "connection with service lost!!" << std::endl;
-      ROS_INFO("update model state failed.");
+      ROS_ERROR("update model state failed.");
     }
-    
-    if(gimbal_state_client)
-    {
-      // target_gimbal_state.link_name = gimbal_link_name;
-      // target_gimbal_state.reference_frame = gimbal_reference_frame;
-      // target_gimbal_state.pose = target_gimbal_pose;
-      // target_gimbal_state.twist = target_gimbal_twist;
-      // set_link_state.request.link_state = target_gimbal_state;
-      // gimbal_state_client.call(set_link_state);
-
-      target_gimbal_state.link_name = gimbal_yaw_link_name;
-      target_gimbal_state.reference_frame = gimbal_virtual_link_name;
-      target_gimbal_state.pose = target_yaw_pose;
-      target_gimbal_state.twist = target_gimbal_twist;
-      set_link_state.request.link_state = target_gimbal_state;
-      gimbal_state_client.call(set_link_state);
-
-      target_gimbal_state.link_name = gimbal_roll_link_name;
-      target_gimbal_state.reference_frame = gimbal_yaw_link_name;
-      target_gimbal_state.pose = target_roll_pose;
-      target_gimbal_state.twist = target_gimbal_twist;
-      set_link_state.request.link_state = target_gimbal_state;
-      gimbal_state_client.call(set_link_state);
-
-      target_gimbal_state.link_name = gimbal_pitch_link_name;
-      target_gimbal_state.reference_frame = gimbal_roll_link_name;
-      target_gimbal_state.pose = target_pitch_pose;
-      target_gimbal_state.twist = target_gimbal_twist;
-      set_link_state.request.link_state = target_gimbal_state;
-      gimbal_state_client.call(set_link_state);
-    }
-    else
-    {
-      ROS_INFO("update gimbal state failed.");
-    }
-
-    if (model_state_client)
-    {
-      target_model_state.model_name = car_model_name;
-      target_model_state.reference_frame = car_reference_frame;
-      target_model_state.pose = car_target_pose;
-      target_model_state.twist = car_target_twist;
-      set_model_state.request.model_state = target_model_state;
-      model_state_client.call(set_model_state);
-    }
-
     spin_rate.sleep();
   }
 

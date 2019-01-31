@@ -15,7 +15,7 @@
     <arg name="name" value="not_m100" />
   </include>
   
-  <node name="hku_m100_pcsim_gazebo_bridge" pkg="hku_m100_gazebo" type="hku_m100_pcsim_gazebo_bridge" respawn="true" />
+  <node name="hku_m100_pcsim_gazebo_bridge" pkg="hku_m100_gazebo" type="hku_m100_pcsim_gazebo_bridge" respawn="false" />
   <!-- Start rviz visualization with preset config -->
   <!--<node pkg="rviz" type="rviz" name="rviz" args="-d $(find hector_quadrotor_demo)/rviz_cfg/outdoor_flight.rviz"/>-->
 
