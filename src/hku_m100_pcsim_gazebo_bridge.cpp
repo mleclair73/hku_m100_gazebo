@@ -47,7 +47,7 @@ geometry_msgs::Pose target_pitch_pose;
 gazebo_msgs::ModelState target_model_state;
 gazebo_msgs::LinkState target_gimbal_state;
 
-std::string model_name = "not_m100";
+std::string model_name = "hku_m100";
 std::string car_model_name = "polaris_ranger_xp900";
 std::string reference_frame = "world";
 std::string car_reference_frame = "chassis";
@@ -247,7 +247,7 @@ int main(int argc, char **argv)
   //gimbal_orientation_subscriber = n.subscribe("/dji_sdk/gimbal", 1000, gimbalOrientationCallback);
   //car_driver_subscriber = n.subscribe("/car/cmd_vel", 1000, carPositionCallback);
 
-  model_state_client = n.serviceClient<gazebo_msgs::SetModelState>("/gazebo/set_model_state", true);
+  //model_state_client = n.serviceClient<gazebo_msgs::SetModelState>("/gazebo/set_model_state", true);
 
   car_next_q = tf::Quaternion(0, 0, 0, 1);
   car_ori_m = tf::Matrix3x3(car_next_q);
@@ -260,22 +260,22 @@ int main(int argc, char **argv)
   {
     ros::spinOnce();
 
-    if(1)
+    target_model_state.model_name = model_name;
+    target_model_state.reference_frame = reference_frame;
+    target_model_state.pose = target_pose;
+    target_model_state.twist = target_twist;
+    set_model_state.request.model_state = target_model_state;
+    if (ros::service::call("/gazebo/set_model_state", set_model_state))
     {
-      target_model_state.model_name = model_name;
-      target_model_state.reference_frame = reference_frame;
-      target_model_state.pose = target_pose;
-      target_model_state.twist = target_twist;
-      set_model_state.request.model_state = target_model_state;
-      model_state_client.call(set_model_state);
-      ROS_ERROR_STREAM("Name: " << target_model_state.model_name << " Ref frame: " << target_model_state.reference_frame << " Pose: " << target_model_state.pose.position.x << ", " << target_model_state.pose.position.y << ", " << target_model_state.pose.position.z);
-      ROS_ERROR("Twist: %f, %f, %f", target_model_state.twist.linear.x, target_model_state.twist.linear.y, target_model_state.twist.linear.z);
+      ROS_ERROR("Set model state succeeded");
     }
     else
     {
-      // std::cout << "connection with service lost!!" << std::endl;
-      ROS_ERROR("update model state failed.");
+      ROS_ERROR("Set model state failed");
     }
+    //model_state_client.call(set_model_state);
+    //ROS_ERROR_STREAM("Name: " << target_model_state.model_name << " Ref frame: " << target_model_state.reference_frame << " Pose: " << target_model_state.pose.position.x << ", " << target_model_state.pose.position.y << ", " << target_model_state.pose.position.z);
+    //ROS_ERROR("Twist: %f, %f, %f", target_model_state.twist.linear.x, target_model_state.twist.linear.y, target_model_state.twist.linear.z);
     spin_rate.sleep();
   }
 

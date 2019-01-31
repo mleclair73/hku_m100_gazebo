@@ -115,7 +115,7 @@
           <geometry>
             <mesh>
               <scale>1 1 1</scale>
-              <uri>/home/caochao/catkin_ws/src/hku_m100_description/meshes/hku_m100/hku_m100.stl</uri>
+              <uri>/home/john/Documents/school/2019-spring/capstone/hku_m100_sim/src/hku_m100_description/meshes/hku_m100/hku_m100.stl</uri>
             </mesh>
           </geometry>
           <max_contacts>10</max_contacts>
@@ -134,7 +134,7 @@
           <geometry>
             <mesh>
               <scale>1 1 1</scale>
-              <uri>/home/caochao/catkin_ws/src/hku_m100_description/meshes/hku_m100/hku_m100.dae</uri>
+              <uri>/home/john/Documents/school/2019-spring/capstone/hku_m100_sim/src/hku_m100_description/meshes/hku_m100/hku_m100.dae</uri>
             </mesh>
           </geometry>
         </visual>
@@ -165,7 +165,7 @@
           <geometry>
             <mesh>
               <scale>1 1 1</scale>
-              <uri>/home/caochao/catkin_ws/src/hku_m100_description/meshes/hku_m100/gimbal.stl</uri>
+              <uri>/home/john/Documents/school/2019-spring/capstone/hku_m100_sim/src/hku_m100_description/meshes/hku_m100/gimbal.stl</uri>
             </mesh>
           </geometry>
           <surface>
@@ -184,7 +184,7 @@
           <geometry>
             <mesh>
               <scale>1 1 1</scale>
-              <uri>/home/caochao/catkin_ws/src/hku_m100_description/meshes/hku_m100/gimbal.dae</uri>
+              <uri>/home/john/Documents/school/2019-spring/capstone/hku_m100_sim/src/hku_m100_description/meshes/hku_m100/gimbal.dae</uri>
             </mesh>
           </geometry>
         </visual>
