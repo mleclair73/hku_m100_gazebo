@@ -3,11 +3,11 @@
 
 #include "std_msgs/String.h"
 
-#include <dji_sdk/Acceleration.h>
-#include <dji_sdk/AttitudeQuaternion.h>
-#include <dji_sdk/Velocity.h>
-#include <dji_sdk/LocalPosition.h>
-#include <dji_sdk/Gimbal.h>
+// #include <dji_sdk/Acceleration.h>
+// #include <dji_sdk/AttitudeQuaternion.h>
+// #include <dji_sdk/Velocity.h>
+// #include <dji_sdk/LocalPosition.h>
+// #include <dji_sdk/Gimbal.h>
 #include <dji_sdk/SetLocalPosRef.h>
 
 #include <gazebo_msgs/ModelState.h>
@@ -75,6 +75,8 @@ gazebo_msgs::SetLinkState set_link_state;
 
 bool velocity_updated = false;
 bool position_updated = false;
+bool attitude_updated = false;
+bool imu_updated = false;
 
 double gimbal_pitch;
 double gimbal_yaw;
@@ -98,6 +100,8 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& imu_msg)
     target_twist.angular.x = imu_msg->angular_velocity.x;
     target_twist.angular.y = imu_msg->angular_velocity.y;
     target_twist.angular.z = imu_msg->angular_velocity.z;
+
+    imu_updated = true;
 }
 
 void attitudeQuaternionCallback(const geometry_msgs::QuaternionStamped::ConstPtr& attitude_quaternion_msg)
@@ -107,9 +111,7 @@ void attitudeQuaternionCallback(const geometry_msgs::QuaternionStamped::ConstPtr
   target_pose.orientation.y = attitude_quaternion_msg->quaternion.y;
   target_pose.orientation.z = attitude_quaternion_msg->quaternion.z;
 
-  // std::cout << "attitude callback get called" << std::endl;
-
-  
+  attitude_updated = true;
 }
 
 void velocityCallback(const geometry_msgs::Vector3Stamped::ConstPtr& velocity_msg)
@@ -119,8 +121,6 @@ void velocityCallback(const geometry_msgs::Vector3Stamped::ConstPtr& velocity_ms
   target_twist.linear.z  = velocity_msg->vector.z;
 
   velocity_updated = true;
-  // std::cout << "velocity callback get called" << std::endl;
-
 }
 
 void localPositionCallback(const geometry_msgs::PointStamped::ConstPtr& position_msg)
@@ -130,97 +130,6 @@ void localPositionCallback(const geometry_msgs::PointStamped::ConstPtr& position
   target_pose.position.z = position_msg->point.z;
 
   position_updated = true;
-  // std::cout << "local position callback get called" << std::endl;
-
-}
-
-
-void gimbalOrientationCallback(const dji_sdk::Gimbal::ConstPtr& gimbal_orientation_msg)
-{
-  gimbal_pitch = gimbal_orientation_msg->pitch;
-  gimbal_yaw = gimbal_orientation_msg->yaw;
-  gimbal_roll = gimbal_orientation_msg->roll;
-
-  //roll pitch yaw
-  gimbal_q.setEuler(-gimbal_pitch / 180 * M_PI, gimbal_roll / 180 * M_PI, -gimbal_yaw / 180 * M_PI);
-
-  target_gimbal_pose.orientation.w = gimbal_q.w();
-  target_gimbal_pose.orientation.x = gimbal_q.x();
-  target_gimbal_pose.orientation.y = gimbal_q.y();
-  target_gimbal_pose.orientation.z = gimbal_q.z();
-
-
-  gimbal_roll_q.setEuler(0, gimbal_roll / 180 * M_PI, 0);
-  gimbal_yaw_q.setEuler(0, 0, -gimbal_yaw / 180 * M_PI);
-  gimbal_pitch_q.setEuler(-gimbal_pitch / 180 * M_PI, 0, 0);
-
-
-  target_roll_pose.orientation.w = gimbal_roll_q.w();
-  target_roll_pose.orientation.x = gimbal_roll_q.x();
-  target_roll_pose.orientation.y = gimbal_roll_q.y();
-  target_roll_pose.orientation.z = gimbal_roll_q.z();
-
-  target_yaw_pose.orientation.w = gimbal_yaw_q.w();
-  target_yaw_pose.orientation.x = gimbal_yaw_q.x();
-  target_yaw_pose.orientation.y = gimbal_yaw_q.y();
-  target_yaw_pose.orientation.z = gimbal_yaw_q.z();
-
-  target_pitch_pose.orientation.w = gimbal_pitch_q.w();
-  target_pitch_pose.orientation.x = gimbal_pitch_q.x();
-  target_pitch_pose.orientation.y = gimbal_pitch_q.y();
-  target_pitch_pose.orientation.z = gimbal_pitch_q.z();
-
-  target_gimbal_pose.position.x = 0.1;
-  target_gimbal_pose.position.y = 0.0;
-  target_gimbal_pose.position.z = -0.04;
-
-
-  target_gimbal_twist.angular.x = 0;
-  target_gimbal_twist.angular.y = 0;
-  target_gimbal_twist.angular.z = 0;
-  target_gimbal_twist.linear.x = 0;
-  target_gimbal_twist.linear.y = 0;
-  target_gimbal_twist.linear.z = 0;
-
-
-}
-
-void carPositionCallback(const geometry_msgs::Twist& twist)
-{
-  car_q.setEuler(0, 0, twist.angular.x);
-  car_next_q *= car_q;
-
-  car_ori_m = tf::Matrix3x3(car_next_q);
-  car_original_effort_v = tf::Vector3(twist.linear.x, 0, 0);
-  car_rotated_effort_v = car_ori_m * car_original_effort_v;
-
-
-  car_target_pose.orientation.w = car_next_q.w();
-  car_target_pose.orientation.x = car_next_q.x();
-  car_target_pose.orientation.y = car_next_q.y();
-  car_target_pose.orientation.z = car_next_q.z();
-
-  // car_target_pose.position.x = twist.linear.x;
-  // car_target_pose.position.y = twist.linear.y;
-  // car_target_pose.position.z = twist.linear.z;
-
-  // car_target_pose.orientation.w = 0;
-  // car_target_pose.orientation.x = 0;
-  // car_target_pose.orientation.y = 0;
-  // car_target_pose.orientation.z = 0;
-
-  car_target_pose.position.x = 0;
-  car_target_pose.position.y = 0;
-  car_target_pose.position.z = 0;
-
-  // car_target_twist.linear.x  = twist.linear.x * car_ori_m.getColumn(0).x();
-  // car_target_twist.linear.y  = twist.linear.x * car_ori_m.getColumn(0).y();
-  car_target_twist.linear.x  = car_rotated_effort_v.x();
-  car_target_twist.linear.y  = car_rotated_effort_v.y();
-  car_target_twist.linear.z  = 0;
-  car_target_twist.angular.x  = 0;
-  car_target_twist.angular.y  = 0;
-  car_target_twist.angular.z  = 0;
 }
 
 int main(int argc, char **argv)
@@ -244,17 +153,13 @@ int main(int argc, char **argv)
   velocity_subscriber = n.subscribe("/dji_sdk/velocity", 1000, velocityCallback);
   local_position_subscriber = n.subscribe("/dji_sdk/local_position", 1000, localPositionCallback);
   imu_subscriber = n.subscribe("/dji_sdk/imu", 1000, imuCallback);
-  //gimbal_orientation_subscriber = n.subscribe("/dji_sdk/gimbal", 1000, gimbalOrientationCallback);
-  //car_driver_subscriber = n.subscribe("/car/cmd_vel", 1000, carPositionCallback);
 
   //model_state_client = n.serviceClient<gazebo_msgs::SetModelState>("/gazebo/set_model_state", true);
 
-  car_next_q = tf::Quaternion(0, 0, 0, 1);
-  car_ori_m = tf::Matrix3x3(car_next_q);
-
   ROS_INFO("Bridge between PC sim and gazebo connected");
 
-  ros::Rate spin_rate(200);
+  ros::Rate spin_rate(10);
+  bool first = true;
 
   while(ros::ok())
   {
@@ -265,15 +170,18 @@ int main(int argc, char **argv)
     target_model_state.pose = target_pose;
     target_model_state.twist = target_twist;
     set_model_state.request.model_state = target_model_state;
-    if (ros::service::call("/gazebo/set_model_state", set_model_state))
+    if (first || velocity_updated || position_updated || imu_updated || attitude_updated)
     {
-      ROS_ERROR("Set model state succeeded");
+      first = false;
+      if (ros::service::call("/gazebo/set_model_state", set_model_state))
+      {
+        ROS_ERROR("Set model state succeeded");
+      }
+      else
+      {
+        ROS_ERROR("Set model state failed");
+      }
     }
-    else
-    {
-      ROS_ERROR("Set model state failed");
-    }
-    //model_state_client.call(set_model_state);
     //ROS_ERROR_STREAM("Name: " << target_model_state.model_name << " Ref frame: " << target_model_state.reference_frame << " Pose: " << target_model_state.pose.position.x << ", " << target_model_state.pose.position.y << ", " << target_model_state.pose.position.z);
     //ROS_ERROR("Twist: %f, %f, %f", target_model_state.twist.linear.x, target_model_state.twist.linear.y, target_model_state.twist.linear.z);
     spin_rate.sleep();
