@@ -8,8 +8,8 @@
   </include>
 
   <!-- Spawn simulated quadrotor uav -->
-  <include file="$(find hku_m100_gazebo)/launch/spawn_hku_m100.launch" >
-    <arg name="model" value="$(find hku_m100_description)/urdf/hku_m100.urdf.xacro"/> 
+  <include file="$(find hku_m100_gazebo)/launch/spawn_m100_with_kinect.launch" >
+    <!-- <arg name="model" value="$(find hku_m100_description)/urdf/hku_m100_with_kinetic.urdf.xacro"/>  -->
   </include>
   
   <node name="hku_m100_pcsim_gazebo_bridge" pkg="hku_m100_gazebo" type="hku_m100_pcsim_gazebo_bridge" respawn="false"/> 
