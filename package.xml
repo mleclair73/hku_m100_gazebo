@@ -23,5 +23,6 @@
   <run_depend>dji_sdk</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>message_to_tf</run_depend>
+  <run_depend>hector_gazebo_worlds</run_depend>
 
 </package>
