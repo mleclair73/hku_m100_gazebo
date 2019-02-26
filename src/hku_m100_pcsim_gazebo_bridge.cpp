@@ -100,8 +100,8 @@ void localPositionCallback(const geometry_msgs::PointStamped::ConstPtr& position
 {
   target_pose.position.x = position_msg->point.x;
   target_pose.position.y = -position_msg->point.y;
-  target_pose.position.z = position_msg->point.z;
-  ROS_ERROR("Local Pos Updated");
+  target_pose.position.z = position_msg->point.z + 0.03;
+  // ROS_ERROR("Local Pos Updated");
 
   position_updated = true;
 }
