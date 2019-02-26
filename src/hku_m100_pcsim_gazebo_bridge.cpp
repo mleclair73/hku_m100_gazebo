@@ -1,13 +1,9 @@
 #include "ros/ros.h"
 #include <ros/console.h>
+#include "tf/transform_datatypes.h"
 
 #include "std_msgs/String.h"
 
-// #include <dji_sdk/Acceleration.h>
-// #include <dji_sdk/AttitudeQuaternion.h>
-// #include <dji_sdk/Velocity.h>
-// #include <dji_sdk/LocalPosition.h>
-// #include <dji_sdk/Gimbal.h>
 #include <dji_sdk/SetLocalPosRef.h>
 
 #include <gazebo_msgs/ModelState.h>
@@ -35,29 +31,16 @@ geometry_msgs::Pose target_pose;
 geometry_msgs::Twist target_twist;
 geometry_msgs::Pose target_gimbal_pose;
 geometry_msgs::Twist target_gimbal_twist;
-geometry_msgs::Pose car_target_pose;
-geometry_msgs::Twist car_target_twist;
-
 
 geometry_msgs::Pose target_roll_pose;
 geometry_msgs::Pose target_yaw_pose;
 geometry_msgs::Pose target_pitch_pose;
 
-
 gazebo_msgs::ModelState target_model_state;
 gazebo_msgs::LinkState target_gimbal_state;
 
-std::string model_name = "hku_m100";
-std::string car_model_name = "polaris_ranger_xp900";
+std::string model_name = "m100";
 std::string reference_frame = "world";
-std::string car_reference_frame = "chassis";
-
-// std::string gimbal_link_name = "camera_link";
-std::string gimbal_reference_frame = "base_link";
-std::string gimbal_virtual_link_name = "gimbal_link";
-std::string gimbal_roll_link_name = "roll_link";
-std::string gimbal_pitch_link_name = "pitch_link";
-std::string gimbal_yaw_link_name = "yaw_link";
 
 ros::Subscriber attitude_quaternion_subscriber;
 ros::Subscriber velocity_subscriber;
@@ -78,38 +61,27 @@ bool position_updated = false;
 bool attitude_updated = false;
 bool imu_updated = false;
 
-double gimbal_pitch;
-double gimbal_yaw;
-double gimbal_roll;
-
-tf::Quaternion gimbal_q;
-
-tf::Quaternion gimbal_roll_q;
-tf::Quaternion gimbal_yaw_q;
-tf::Quaternion gimbal_pitch_q;
-
-tf::Quaternion car_q;
-tf::Quaternion car_next_q;
-
-tf::Matrix3x3 car_ori_m;
-tf::Vector3 car_original_effort_v;
-tf::Vector3 car_rotated_effort_v;
-
 void imuCallback(const sensor_msgs::Imu::ConstPtr& imu_msg)
 {
     target_twist.angular.x = imu_msg->angular_velocity.x;
     target_twist.angular.y = imu_msg->angular_velocity.y;
     target_twist.angular.z = imu_msg->angular_velocity.z;
+    // ROS_ERROR("Imu Updated");
 
     imu_updated = true;
 }
 
 void attitudeQuaternionCallback(const geometry_msgs::QuaternionStamped::ConstPtr& attitude_quaternion_msg)
 {
-  target_pose.orientation.w = -attitude_quaternion_msg->quaternion.w;
-  target_pose.orientation.x = -attitude_quaternion_msg->quaternion.x;
-  target_pose.orientation.y = attitude_quaternion_msg->quaternion.y;
-  target_pose.orientation.z = attitude_quaternion_msg->quaternion.z;
+  tf::Quaternion quat;
+  tf::quaternionMsgToTF(attitude_quaternion_msg->quaternion, quat);
+  // the tf::Quaternion has a method to acess roll pitch and yaw
+  double roll, pitch, yaw;
+  tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+  geometry_msgs::Quaternion orientation= tf::createQuaternionMsgFromRollPitchYaw(roll, -pitch, yaw);
+
+  target_pose.orientation = orientation;
+  // ROS_ERROR("Att Updated");
 
   attitude_updated = true;
 }
@@ -119,6 +91,7 @@ void velocityCallback(const geometry_msgs::Vector3Stamped::ConstPtr& velocity_ms
   target_twist.linear.x  = velocity_msg->vector.x;
   target_twist.linear.y  = velocity_msg->vector.y;
   target_twist.linear.z  = velocity_msg->vector.z;
+  // ROS_ERROR("Vel Updated");
 
   velocity_updated = true;
 }
@@ -128,6 +101,7 @@ void localPositionCallback(const geometry_msgs::PointStamped::ConstPtr& position
   target_pose.position.x = position_msg->point.x;
   target_pose.position.y = -position_msg->point.y;
   target_pose.position.z = position_msg->point.z;
+  ROS_ERROR("Local Pos Updated");
 
   position_updated = true;
 }
@@ -146,19 +120,19 @@ int main(int argc, char **argv)
   }
   else
   {
-    ROS_ERROR("Couldn't set local position reference");
+    ROS_ERROR("Couldn't set local position reference. It's not going to work unless you set this manually");
   }
  
-  attitude_quaternion_subscriber = n.subscribe("/dji_sdk/attitude_quaternion", 1000, attitudeQuaternionCallback);
-  velocity_subscriber = n.subscribe("/dji_sdk/velocity", 1000, velocityCallback);
-  local_position_subscriber = n.subscribe("/dji_sdk/local_position", 1000, localPositionCallback);
-  imu_subscriber = n.subscribe("/dji_sdk/imu", 1000, imuCallback);
+  attitude_quaternion_subscriber = n.subscribe("/uas1/dji_sdk/attitude", 1000, attitudeQuaternionCallback);
+  velocity_subscriber = n.subscribe("/uas1/dji_sdk/velocity", 1000, velocityCallback);
+  local_position_subscriber = n.subscribe("/uas1/dji_sdk/local_position", 1000, localPositionCallback);
+  imu_subscriber = n.subscribe("/uas1/dji_sdk/imu", 1000, imuCallback);
 
   //model_state_client = n.serviceClient<gazebo_msgs::SetModelState>("/gazebo/set_model_state", true);
 
   ROS_INFO("Bridge between PC sim and gazebo connected");
 
-  ros::Rate spin_rate(10);
+  ros::Rate spin_rate(50);
   bool first = true;
 
   while(ros::ok())
@@ -175,15 +149,22 @@ int main(int argc, char **argv)
       first = false;
       if (ros::service::call("/gazebo/set_model_state", set_model_state))
       {
-        ROS_ERROR("Set model state succeeded");
+        ROS_ERROR_THROTTLE(1, "Set model state succeeded");
       }
       else
       {
-        ROS_ERROR("Set model state failed");
+        ROS_ERROR_THROTTLE(1, "Set model state failed");
       }
+      ROS_ERROR_STREAM_THROTTLE(1, "Name: " << target_model_state.model_name << " Ref frame: " << \
+       target_model_state.reference_frame << " Pose: " << target_model_state.pose.position.x << ", " \
+       << target_model_state.pose.position.y << ", " << target_model_state.pose.position.z);
+      // ROS_ERROR_THROTTLE(1, "Twist: %f, %f, %f", target_model_state.twist.linear.x, target_model_state.twist.linear.y, target_model_state.twist.linear.z);
+      // ROS_ERROR_THROTTLE(1, "Pose: %f, %f, %f, %f", target_model_state.pose.orientation.w,
+      //                                   target_model_state.pose.orientation.x,
+      //                                   target_model_state.pose.orientation.y,
+      //                                   target_model_state.pose.orientation.z);
+
     }
-    //ROS_ERROR_STREAM("Name: " << target_model_state.model_name << " Ref frame: " << target_model_state.reference_frame << " Pose: " << target_model_state.pose.position.x << ", " << target_model_state.pose.position.y << ", " << target_model_state.pose.position.z);
-    //ROS_ERROR("Twist: %f, %f, %f", target_model_state.twist.linear.x, target_model_state.twist.linear.y, target_model_state.twist.linear.z);
     spin_rate.sleep();
   }
 

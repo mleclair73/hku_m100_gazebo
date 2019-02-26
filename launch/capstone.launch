@@ -8,6 +8,7 @@
   </include>
 
   <!-- Spawn simulated quadrotor uav -->
+  <!-- <include file="$(find hku_m100_gazebo)/launch/spawn_hku_m100.launch" > -->
   <include file="$(find hku_m100_gazebo)/launch/spawn_m100_with_kinect.launch" >
     <!-- <arg name="model" value="$(find hku_m100_description)/urdf/hku_m100_with_kinetic.urdf.xacro"/>  -->
   </include>
