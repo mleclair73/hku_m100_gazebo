@@ -66,7 +66,7 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& imu_msg)
     target_twist.angular.x = imu_msg->angular_velocity.x;
     target_twist.angular.y = imu_msg->angular_velocity.y;
     target_twist.angular.z = imu_msg->angular_velocity.z;
-    // ROS_ERROR("Imu Updated");
+//    ROS_ERROR("Imu Updated");
 
     imu_updated = true;
 }
@@ -81,7 +81,7 @@ void attitudeQuaternionCallback(const geometry_msgs::QuaternionStamped::ConstPtr
   geometry_msgs::Quaternion orientation= tf::createQuaternionMsgFromRollPitchYaw(roll, -pitch, yaw);
 
   target_pose.orientation = orientation;
-  // ROS_ERROR("Att Updated");
+ // ROS_ERROR("Att Updated");
 
   attitude_updated = true;
 }
@@ -91,7 +91,7 @@ void velocityCallback(const geometry_msgs::Vector3Stamped::ConstPtr& velocity_ms
   target_twist.linear.x  = velocity_msg->vector.x;
   target_twist.linear.y  = velocity_msg->vector.y;
   target_twist.linear.z  = velocity_msg->vector.z;
-  // ROS_ERROR("Vel Updated");
+  //ROS_ERROR("Vel Updated");
 
   velocity_updated = true;
 }
@@ -100,8 +100,8 @@ void localPositionCallback(const geometry_msgs::PointStamped::ConstPtr& position
 {
   target_pose.position.x = position_msg->point.x;
   target_pose.position.y = -position_msg->point.y;
-  target_pose.position.z = position_msg->point.z + 0.03;
-  // ROS_ERROR("Local Pos Updated");
+  target_pose.position.z = position_msg->point.z + 0.2;
+  //ROS_ERROR("Local Pos Updated");
 
   position_updated = true;
 }
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
   dji_sdk::SetLocalPosRef srv;
-  if (ros::service::call("/dji_sdk/set_local_pos_ref", srv))
+  if (ros::service::call("/uas4/dji_sdk/set_local_pos_ref", srv))
   {
     ROS_ERROR("Set local pos ref!");
   }
@@ -123,10 +123,10 @@ int main(int argc, char **argv)
     ROS_ERROR("Couldn't set local position reference. It's not going to work unless you set this manually");
   }
  
-  attitude_quaternion_subscriber = n.subscribe("/uas1/dji_sdk/attitude", 1000, attitudeQuaternionCallback);
-  velocity_subscriber = n.subscribe("/uas1/dji_sdk/velocity", 1000, velocityCallback);
-  local_position_subscriber = n.subscribe("/uas1/dji_sdk/local_position", 1000, localPositionCallback);
-  imu_subscriber = n.subscribe("/uas1/dji_sdk/imu", 1000, imuCallback);
+  attitude_quaternion_subscriber = n.subscribe("/uas4/dji_sdk/attitude", 1, attitudeQuaternionCallback);
+  velocity_subscriber = n.subscribe("/uas4/dji_sdk/velocity", 1, velocityCallback);
+  local_position_subscriber = n.subscribe("/uas4/dji_sdk/local_position", 1, localPositionCallback);
+  imu_subscriber = n.subscribe("/uas4/dji_sdk/imu", 1, imuCallback);
 
   //model_state_client = n.serviceClient<gazebo_msgs::SetModelState>("/gazebo/set_model_state", true);
 

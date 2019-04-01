@@ -7,6 +7,7 @@
   <arg name="x" default="3.0"/>
   <arg name="y" default="3.0"/>
   <arg name="z" default="0.3"/>
+  <arg name="controllers" default=""/>
 
   <arg name="world_frame"             default="/world"/>
   <arg name="base_link_frame"         default="$(arg tf_prefix)/base_link"/>
